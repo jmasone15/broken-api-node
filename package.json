@@ -1,0 +1,25 @@
+{
+  "name": "broken-api-node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmasone15/broken-api-node.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jmasone15/broken-api-node/issues"
+  },
+  "homepage": "https://github.com/jmasone15/broken-api-node#readme",
+  "dependencies": {
+    "express": "^4.18.2",
+    "morgan": "^1.10.0"
+  }
+}
