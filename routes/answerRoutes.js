@@ -1,24 +1,11 @@
 const router = require("express").Router();
 const { Answer } = require("../models");
 
-router.get("/:active?", async (req, res) => {
-    try {
-        const data = await Answer.findAll({ where: {active_ind: req.params.active || true } });
-        return res.status(200).json(data);
-    } catch (err) {
-        console.error(err)
-        return res.status(500).send("Internal Server Error")
-    }
-});
-
-router.get("/:id", async (req, res) => {
+router.get("/:id?", async (req, res) => {
     try {
         const { id } = req.params;
-        if (!id) {
-            return res.status(400).send("Answer Id is a required field.");
-        };
 
-        const data = await Answer.findOne({ where: { id }});
+        const data = await Answer.findAll(!id ? {} : { where: { id } });
         return res.status(200).json(data);
     } catch (err) {
         console.error(err)
@@ -53,7 +40,7 @@ router.put("/:id", async (req, res) => {
             return res.status(400).send("Fields to update must be provided.");
         };
 
-        await Answer.update({ response }, { where: { id }});
+        await Answer.update({ response }, { where: { id } });
         return res.status(200).send(`Response ${id} updated successfully.`);
     } catch (error) {
         console.error(error);
@@ -69,7 +56,7 @@ router.put("/soft/:id", async (req, res) => {
             return res.status(400).send("Answer Id is a required parameter.");
         };
 
-        await Answer.update({ active_ind: false }, { where: { id }});
+        await Answer.update({ active_ind: false }, { where: { id } });
         return res.status(200).send(`Answer ${id} successfully deleted (Soft).`);
     } catch (error) {
         console.error(error);

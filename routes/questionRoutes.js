@@ -1,39 +1,11 @@
 const router = require("express").Router();
 const { Question } = require("../models");
 
-router.get("/:id?/:user_id?/active?", async (req, res) => {
-    try {
-        const { id, user_id, active } = req.params;
-        const where = {};
-
-        if (id) {
-            where.id = id
-        }
-        if (user_id) {
-            where.user_id = user_id
-        }
-        if (active) {
-            where.active_ind = active
-        }
-
-        console.log(where);
-
-        const data = await Question.findAll({ where });
-        return res.status(200).json(data);
-    } catch (err) {
-        console.error(err)
-        return res.status(500).send("Internal Server Error")
-    }
-});
-
-router.get("/:id", async (req, res) => {
+router.get("/:id?", async (req, res) => {
     try {
         const { id } = req.params;
-        if (!id) {
-            return res.status(400).send("Question Id is a required parameter.");
-        };
 
-        const data = await Question.findOne({ where: { id } });
+        const data = await Question.findAll(!id ? {} : { where: { id } });
         return res.status(200).json(data);
     } catch (err) {
         console.error(err)
