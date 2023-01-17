@@ -13,6 +13,46 @@ router.get("/:id?", async (req, res) => {
     }
 });
 
+router.get("/user/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        if(!id) {
+            return res.status(400).send("Missing user_id field.");
+        };
+
+        const userData = await User.findOne({ where: { id } });
+        if (!userData) {
+            return res.status(400).send(`User ${id} not found.`)
+        };
+
+        const userAnswers = await userData.getAnswers();
+        return res.status(200).json(userAnswers);
+    } catch (err) {
+        console.error(err);
+        return res.status(500).send("Internal Server Error");
+    }
+});
+
+router.get("/question/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        if(!id) {
+            return res.status(400).send("Missing question_id field.");
+        };
+
+        const questionData = await Question.findOne({ where: { id } });
+        if (!questionData) {
+            return res.status(400).send(`Question ${id} not found.`)
+        };
+
+        const questionAnswers = await questionData.getAnswers();
+        return res.status(200).json(questionAnswers);
+    } catch (err) {
+        console.error(err);
+        return res.status(500).send("Internal Server Error");
+    }
+});
+
 router.post("/", async (req, res) => {
     try {
         const { response } = req.body;
