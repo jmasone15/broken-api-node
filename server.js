@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 3001;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("tiny"));
+// Change this to use jwt and cookies
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: true,

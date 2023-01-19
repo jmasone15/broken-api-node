@@ -1,10 +1,10 @@
 const router = require("express").Router();
 const { User } = require("../models");
 const bcrypt = require("bcryptjs");
+const { login } = require("../middleware/auth");
 
 router.get("/:id?", async (req, res) => {
     try {
-        console.log(req.session);
         const { id } = req.params;
 
         const data = await User.findAll(!id ? {} : { where: { id } });
@@ -26,8 +26,8 @@ router.post("/", async (req, res) => {
         const passHash = await bcrypt.hash(password, passSalt);
 
         const newUser = await User.create({ username, password: passHash });
-        // Auth session save middleware here
-        return res.status(200).json(newUser);
+        login(req.session, newUser);
+        return res.status(200).send("New user created successfully");
     } catch (err) {
         console.error(err)
         return res.status(500).send("Internal Server Error")
@@ -51,7 +51,7 @@ router.post("/login", async (req, res) => {
             return res.status(401).send("Incorrect credentials, please try again.");
         };
 
-        // Auth session save middleware here
+        login(req.session, loginUser);
         return res.status(200).send("Successfully logged in");
     } catch (err) {
         console.error(err);
