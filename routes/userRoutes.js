@@ -1,8 +1,10 @@
 const router = require("express").Router();
 const { User } = require("../models");
+const bcrypt = require("bcryptjs");
 
 router.get("/:id?", async (req, res) => {
     try {
+        console.log(req.session);
         const { id } = req.params;
 
         const data = await User.findAll(!id ? {} : { where: { id } });
@@ -20,10 +22,39 @@ router.post("/", async (req, res) => {
             return res.status(400).send("Username and password are required fields.");
         };
 
-        const newUser = await User.create({ username, password });
+        const passSalt = await bcrypt.genSalt();
+        const passHash = await bcrypt.hash(password, passSalt);
+
+        const newUser = await User.create({ username, password: passHash });
+        // Auth session save middleware here
         return res.status(200).json(newUser);
     } catch (err) {
         console.error(err)
+        return res.status(500).send("Internal Server Error")
+    }
+});
+
+router.post("/login", async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).send("Username and password are required fields.");
+        };
+
+        const loginUser = await User.findOne({ where: { username } });
+        if (!loginUser) {
+            return res.status(401).send("Incorrect credentials, please try again.");
+        };
+
+        const passCorrect = await bcrypt.compare(password, loginUser.password);
+        if (!passCorrect) {
+            return res.status(401).send("Incorrect credentials, please try again.");
+        };
+
+        // Auth session save middleware here
+        return res.status(200).send("Successfully logged in");
+    } catch (err) {
+        console.error(err);
         return res.status(500).send("Internal Server Error")
     }
 });
