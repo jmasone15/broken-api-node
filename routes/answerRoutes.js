@@ -1,7 +1,9 @@
 const router = require("express").Router();
 const { User, Question, Answer } = require("../models");
+const { auth } = require("../middleware/auth");
 
-router.get("/:id?", async (req, res) => {
+// Admin Route
+router.get("/:id?", auth, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -13,16 +15,11 @@ router.get("/:id?", async (req, res) => {
     }
 });
 
-router.get("/user/:id", async (req, res) => {
+router.get("/user", auth, async (req, res) => {
     try {
-        const { id } = req.params;
-        if(!id) {
-            return res.status(400).send("Missing user_id field.");
-        };
-
-        const userData = await User.findOne({ where: { id } });
+        const userData = await User.findOne({ where: { id: req.user } });
         if (!userData) {
-            return res.status(400).send(`User ${id} not found.`)
+            return res.status(400).send(`User ${req.user} not found.`)
         };
 
         const userAnswers = await userData.getAnswers();
@@ -33,7 +30,7 @@ router.get("/user/:id", async (req, res) => {
     }
 });
 
-router.get("/question/:id", async (req, res) => {
+router.get("/question/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
         if(!id) {
@@ -53,22 +50,22 @@ router.get("/question/:id", async (req, res) => {
     }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", auth, async (req, res) => {
     try {
-        const { response } = req.body;
+        const { response, question_id } = req.body;
         if (!response) {
-            res.status(400).send("Response is a required field.");
+            return res.status(400).send("Response is a required field.");
         };
 
-        const newAnswer = await Answer.create({ response });
-        res.status(200).json(newAnswer);
+        const newAnswer = await Answer.create({ response, question_id, user_id: req.user });
+        return res.status(200).json(newAnswer);
     } catch (err) {
         console.error(err)
         res.status(500).send("Internal Server Error")
     }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
         const { response } = req.body;
@@ -80,6 +77,8 @@ router.put("/:id", async (req, res) => {
             return res.status(400).send("Fields to update must be provided.");
         };
 
+        // Check that question is owned by req.user before updating
+
         await Answer.update({ response }, { where: { id } });
         return res.status(200).send(`Response ${id} updated successfully.`);
     } catch (error) {
@@ -89,12 +88,13 @@ router.put("/:id", async (req, res) => {
 });
 
 // Soft Delete
-router.put("/soft/:id", async (req, res) => {
+router.put("/soft/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
         if (!id) {
             return res.status(400).send("Answer Id is a required parameter.");
         };
+        // Check that question is owned by req.user before deleting
 
         await Answer.update({ active_ind: false }, { where: { id } });
         return res.status(200).send(`Answer ${id} successfully deleted (Soft).`);
@@ -104,8 +104,8 @@ router.put("/soft/:id", async (req, res) => {
     }
 });
 
-// Hard Delete
-router.delete("/:id", async (req, res) => {
+// Hard Delete | Admin Route
+router.delete("/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
         if (!id) {

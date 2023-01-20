@@ -1,9 +1,9 @@
 const router = require("express").Router();
 const { User } = require("../models");
 const bcrypt = require("bcryptjs");
-const { login } = require("../middleware/auth");
+const { login, logout, auth } = require("../middleware/auth");
 
-router.get("/:id?", async (req, res) => {
+router.get("/data/:id?", async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -26,7 +26,7 @@ router.post("/", async (req, res) => {
         const passHash = await bcrypt.hash(password, passSalt);
 
         const newUser = await User.create({ username, password: passHash });
-        login(req.session, newUser);
+        login(req.session, newUser.id);
         return res.status(200).send("New user created successfully");
     } catch (err) {
         console.error(err)
@@ -51,12 +51,22 @@ router.post("/login", async (req, res) => {
             return res.status(401).send("Incorrect credentials, please try again.");
         };
 
-        login(req.session, loginUser);
+        login(req.session, loginUser.id);
         return res.status(200).send("Successfully logged in");
     } catch (err) {
         console.error(err);
         return res.status(500).send("Internal Server Error")
     }
+});
+
+// Testing route, delete later
+router.get("/session", (req, res) => {
+    res.json(req.session)
+});
+
+router.get("/logout", (req, res) => {
+    logout(req.session);
+    res.status(200).send("Successfully logged out");
 });
 
 router.put("/:id", async (req, res) => {

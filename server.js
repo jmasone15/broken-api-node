@@ -4,6 +4,7 @@ const morgan = require("morgan");
 const sequelize = require("./config/connection");
 const routes = require("./routes");
 const session = require("express-session");
+const SequelizeStore = require('connect-session-sequelize')(session.Store);
 require("dotenv").config();
 
 // Initilization
@@ -17,11 +18,11 @@ app.use(morgan("tiny"));
 // Change this to use jwt and cookies
 app.use(session({
     secret: process.env.SESSION_SECRET,
-    resave: true,
+    resave: false,
     saveUninitialized: false,
-    cookie: {
-        maxAge: 3600000 // one hour
-    }
+    store: new SequelizeStore({
+        db: sequelize
+    })
 }));
 
 // Routes
