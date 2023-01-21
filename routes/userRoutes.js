@@ -59,17 +59,12 @@ router.post("/login", async (req, res) => {
     }
 });
 
-// Testing route, delete later
-router.get("/session", (req, res) => {
-    res.json(req.session)
-});
-
-router.get("/logout", (req, res) => {
+router.get("/logout", auth, (req, res) => {
     logout(req.session);
-    res.status(200).send("Successfully logged out");
+    return res.status(200).send("Successfully logged out");
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
         const { username, password } = req.body;
@@ -79,6 +74,9 @@ router.put("/:id", async (req, res) => {
         };
         if (!username && !password) {
             return res.status(400).send("Fields to update must be provided.");
+        };
+        if (req.user !== id) {
+            return res.status(401).send("Unauthorized");
         };
 
         await User.update({ username, password }, { where: { id } });
@@ -90,14 +88,19 @@ router.put("/:id", async (req, res) => {
 });
 
 // Soft Delete
-router.put("/soft/:id", async (req, res) => {
+router.put("/soft/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
         if (!id) {
             return res.status(400).send("User Id is a required parameter.");
         };
+        if (req.user !== id) {
+            return res.status(401).send("Unauthorized");
+        };
 
         await User.update({ active_ind: false }, { where: { id } });
+        logout(req.session);
+
         return res.status(200).send(`User ${id} successfully deleted (Soft).`);
     } catch (error) {
         console.error(error);
@@ -105,7 +108,7 @@ router.put("/soft/:id", async (req, res) => {
     }
 });
 
-// Hard Delete
+// Hard Delete | Admin Route
 router.delete("/:id", async (req, res) => {
     try {
         const { id } = req.params;
@@ -119,6 +122,11 @@ router.delete("/:id", async (req, res) => {
         console.error(error);
         return res.status(500).send("Internal Server Error");
     }
+});
+
+// Testing route, delete later
+router.get("/session", (req, res) => {
+    return res.json(req.session)
 });
 
 module.exports = router;

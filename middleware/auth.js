@@ -22,10 +22,14 @@ module.exports = {
             }
             
             req.user = verify.user;
+            console.log(req.user);
             return next();   
         } catch (error) {
             console.error(error);
             return res.status(500).send("Internal Server Error");
         }
+    },
+    sameUser(req, id) {
+        return req.user === id
     }
 }
