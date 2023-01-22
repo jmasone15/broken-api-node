@@ -2,11 +2,12 @@ const router = require("express").Router();
 const { User, Question, Answer } = require("../models");
 const { auth } = require("../middleware/auth");
 
-// Admin Route
-router.get("/:id?", auth, async (req, res) => {
+// All Protected Routes
+
+// Get Answer(s) | Admin Route
+router.get("/data/:id?", auth, async (req, res) => {
     try {
         const { id } = req.params;
-
         const data = await Answer.findAll(!id ? {} : { where: { id } });
         return res.status(200).json(data);
     } catch (err) {
@@ -15,10 +16,13 @@ router.get("/:id?", auth, async (req, res) => {
     }
 });
 
+// Get Answers for logged in user
 router.get("/user", auth, async (req, res) => {
     try {
         const userData = await User.findOne({ where: { id: req.user } });
         if (!userData) {
+            // If somehow a user is logged in that doesn't exist in our db, log them out (super edge case).
+            logout(req.session);
             return res.status(400).send(`User ${req.user} not found.`)
         };
 
@@ -30,13 +34,14 @@ router.get("/user", auth, async (req, res) => {
     }
 });
 
+// Get Answers for question by q_id
 router.get("/question/:id", auth, async (req, res) => {
     try {
+        // Validation
         const { id } = req.params;
         if(!id) {
             return res.status(400).send("Missing question_id field.");
         };
-
         const questionData = await Question.findOne({ where: { id } });
         if (!questionData) {
             return res.status(400).send(`Question ${id} not found.`)
@@ -50,11 +55,23 @@ router.get("/question/:id", auth, async (req, res) => {
     }
 });
 
+// Create Answer
 router.post("/", auth, async (req, res) => {
     try {
+        // Validation
         const { response, question_id } = req.body;
-        if (!response) {
-            return res.status(400).send("Response is a required field.");
+        if (!response || !question_id) {
+            return res.status(400).send("Missing required field(s)");
+        };
+
+        // Cannot create answer for question that doesn't exist
+        const parentQuestion = Question.findOne({ where: { question_id }});
+        if (!parentQuestion) {
+          return res.status(400).send("No Question with that id");  
+        };
+        // Cannot answer question that user owns
+        if (parentQuestion.user_id == req.user) {
+            return res.status(401).send("Cannot answer your own question.");
         };
 
         const newAnswer = await Answer.create({ response, question_id, user_id: req.user });
@@ -65,21 +82,30 @@ router.post("/", auth, async (req, res) => {
     }
 });
 
+// Update Answer
 router.put("/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
         const { response } = req.body;
 
-        if (!id) {
-            return res.status(400).send("Answer Id is a required parameter.");
-        };
-        if (!response) {
-            return res.status(400).send("Fields to update must be provided.");
+        // Validation
+        if (!id || !response) {
+            return res.status(400).send("Missing Required Fields");
         };
 
-        // Check that question is owned by req.user before updating
+        const updateAnswer = Answer.findOne({ where: { id }});
+        if (!updateAnswer) {
+            return res.status(400).send("No Answer with that id.");
+        };
 
-        await Answer.update({ response }, { where: { id } });
+        // Can only update answer that user owns, Unless Admin
+        if (updateAnswer.user_id !== req.user) {
+            return res.status(401).send("Unauthorized");
+        };
+
+        updateAnswer.response = response;
+        await updateAnswer.save();
+
         return res.status(200).send(`Response ${id} updated successfully.`);
     } catch (error) {
         console.error(error);
@@ -90,13 +116,24 @@ router.put("/:id", auth, async (req, res) => {
 // Soft Delete
 router.put("/soft/:id", auth, async (req, res) => {
     try {
+        // Validation
         const { id } = req.params;
         if (!id) {
             return res.status(400).send("Answer Id is a required parameter.");
         };
-        // Check that question is owned by req.user before deleting
 
-        await Answer.update({ active_ind: false }, { where: { id } });
+        const updateAnswer = Answer.findOne({ where: { id }});
+        if (!updateAnswer) {
+            return res.status(400).send("No Answer with that id.");
+        };
+        // Cannot delete answer that user does not own (unless admin user)
+        if (updateAnswer.user_id !== req.user) {
+            return res.status(401).send("Unauthorized");
+        };
+
+        updateAnswer.active_ind = false;
+        await updateAnswer.save();
+
         return res.status(200).send(`Answer ${id} successfully deleted (Soft).`);
     } catch (error) {
         console.error(error);

@@ -3,10 +3,10 @@ const { User } = require("../models");
 const bcrypt = require("bcryptjs");
 const { login, logout, auth } = require("../middleware/auth");
 
+// Get User(s) | Admin Route
 router.get("/data/:id?", async (req, res) => {
     try {
         const { id } = req.params;
-
         const data = await User.findAll(!id ? {} : { where: { id } });
         return res.status(200).json(data);
     } catch (err) {
@@ -15,18 +15,23 @@ router.get("/data/:id?", async (req, res) => {
     }
 });
 
+// Sign Up New User
 router.post("/", async (req, res) => {
     try {
+        // Validation
         const { username, password } = req.body;
         if (!username || !password) {
             return res.status(400).send("Username and password are required fields.");
         };
 
+        // Password Hashing
         const passSalt = await bcrypt.genSalt();
         const passHash = await bcrypt.hash(password, passSalt);
 
+        // User Creation and Login
         const newUser = await User.create({ username, password: passHash });
         login(req.session, newUser.id);
+
         return res.status(200).send("New user created successfully");
     } catch (err) {
         console.error(err)
@@ -34,23 +39,28 @@ router.post("/", async (req, res) => {
     }
 });
 
+// Login
 router.post("/login", async (req, res) => {
     try {
+        // Validation
         const { username, password } = req.body;
         if (!username || !password) {
             return res.status(400).send("Username and password are required fields.");
         };
 
+        // Find User and check if exists
         const loginUser = await User.findOne({ where: { username } });
         if (!loginUser) {
             return res.status(401).send("Incorrect credentials, please try again.");
         };
 
+        // Validate password hash
         const passCorrect = await bcrypt.compare(password, loginUser.password);
         if (!passCorrect) {
             return res.status(401).send("Incorrect credentials, please try again.");
         };
 
+        // Login
         login(req.session, loginUser.id);
         return res.status(200).send("Successfully logged in");
     } catch (err) {
@@ -59,27 +69,29 @@ router.post("/login", async (req, res) => {
     }
 });
 
+// Logout
 router.get("/logout", auth, (req, res) => {
     logout(req.session);
     return res.status(200).send("Successfully logged out");
 });
 
+// Update User
+// Seperate route eventually to have secure password update
 router.put("/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
-        const { username, password } = req.body;
+        const { username } = req.body;
 
-        if (!id) {
-            return res.status(400).send("User Id is a required parameter.");
+        // Validation
+        if (!id || !username) {
+            return res.status(400).send("Missing required field(s).");
         };
-        if (!username && !password) {
-            return res.status(400).send("Fields to update must be provided.");
-        };
+        // Users can only update their own question (unless admin user)
         if (req.user !== id) {
-            return res.status(401).send("Unauthorized");
+            return res.status(401).send("Unauthorized.");
         };
 
-        await User.update({ username, password }, { where: { id } });
+        await User.update({ username }, { where: { id } });
         return res.status(200).send(`User ${id} updated successfully.`);
     } catch (error) {
         console.error(error);
@@ -91,16 +103,20 @@ router.put("/:id", auth, async (req, res) => {
 router.put("/soft/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
+        
+        // Validation
         if (!id) {
-            return res.status(400).send("User Id is a required parameter.");
+            return res.status(400).send("Missing required field(s)");
         };
+        // Users can only soft delete their own questions (unless admin user)
         if (req.user !== id) {
             return res.status(401).send("Unauthorized");
         };
 
         await User.update({ active_ind: false }, { where: { id } });
-        logout(req.session);
 
+        // If the user deletes their profile, automatically log the out.
+        logout(req.session);
         return res.status(200).send(`User ${id} successfully deleted (Soft).`);
     } catch (error) {
         console.error(error);
