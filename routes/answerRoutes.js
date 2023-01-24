@@ -5,7 +5,7 @@ const { auth } = require("../middleware/auth");
 // All Protected Routes
 
 // Get Answer(s) | Admin Route
-router.get("/data/:id?", auth, async (req, res) => {
+router.get("/data/:id?", auth(true), async (req, res) => {
     try {
         const { id } = req.params;
         const data = await Answer.findAll(!id ? {} : { where: { id } });
@@ -17,13 +17,13 @@ router.get("/data/:id?", auth, async (req, res) => {
 });
 
 // Get Answers for logged in user
-router.get("/user", auth, async (req, res) => {
+router.get("/user", auth(false), async (req, res) => {
     try {
-        const userData = await User.findOne({ where: { id: req.user } });
+        const userData = await User.findOne({ where: { id: req.user.id } });
         if (!userData) {
             // If somehow a user is logged in that doesn't exist in our db, log them out (super edge case).
             logout(req.session);
-            return res.status(400).send(`User ${req.user} not found.`)
+            return res.status(400).send(`User ${req.user.id} not found.`)
         };
 
         const userAnswers = await userData.getAnswers();
@@ -35,7 +35,7 @@ router.get("/user", auth, async (req, res) => {
 });
 
 // Get Answers for question by q_id
-router.get("/question/:id", auth, async (req, res) => {
+router.get("/question/:id", auth(false), async (req, res) => {
     try {
         // Validation
         const { id } = req.params;
@@ -56,7 +56,7 @@ router.get("/question/:id", auth, async (req, res) => {
 });
 
 // Create Answer
-router.post("/", auth, async (req, res) => {
+router.post("/", auth(false), async (req, res) => {
     try {
         // Validation
         const { response, question_id } = req.body;
@@ -70,11 +70,11 @@ router.post("/", auth, async (req, res) => {
           return res.status(400).send("No Question with that id");  
         };
         // Cannot answer question that user owns
-        if (parentQuestion.user_id == req.user) {
+        if (parentQuestion.user_id == req.user.id) {
             return res.status(401).send("Cannot answer your own question.");
         };
 
-        const newAnswer = await Answer.create({ response, question_id, user_id: req.user });
+        const newAnswer = await Answer.create({ response, question_id, user_id: req.user.id });
         return res.status(200).json(newAnswer);
     } catch (err) {
         console.error(err)
@@ -83,7 +83,7 @@ router.post("/", auth, async (req, res) => {
 });
 
 // Update Answer
-router.put("/:id", auth, async (req, res) => {
+router.put("/:id", auth(false), async (req, res) => {
     try {
         const { id } = req.params;
         const { response } = req.body;
@@ -99,7 +99,7 @@ router.put("/:id", auth, async (req, res) => {
         };
 
         // Can only update answer that user owns, Unless Admin
-        if (updateAnswer.user_id !== req.user) {
+        if (updateAnswer.user_id !== req.user.id && !req.user.admin_ind) {
             return res.status(401).send("Unauthorized");
         };
 
@@ -114,7 +114,7 @@ router.put("/:id", auth, async (req, res) => {
 });
 
 // Soft Delete
-router.put("/soft/:id", auth, async (req, res) => {
+router.put("/soft/:id", auth(false), async (req, res) => {
     try {
         // Validation
         const { id } = req.params;
@@ -127,7 +127,7 @@ router.put("/soft/:id", auth, async (req, res) => {
             return res.status(400).send("No Answer with that id.");
         };
         // Cannot delete answer that user does not own (unless admin user)
-        if (updateAnswer.user_id !== req.user) {
+        if (updateAnswer.user_id !== req.user.id && !req.user.admin_ind) {
             return res.status(401).send("Unauthorized");
         };
 
@@ -142,7 +142,7 @@ router.put("/soft/:id", auth, async (req, res) => {
 });
 
 // Hard Delete | Admin Route
-router.delete("/:id", auth, async (req, res) => {
+router.delete("/:id", auth(true), async (req, res) => {
     try {
         const { id } = req.params;
         if (!id) {

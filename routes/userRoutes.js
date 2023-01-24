@@ -2,9 +2,10 @@ const router = require("express").Router();
 const { User } = require("../models");
 const bcrypt = require("bcryptjs");
 const { login, logout, auth } = require("../middleware/auth");
+require("dotenv").config();
 
 // Get User(s) | Admin Route
-router.get("/data/:id?", async (req, res) => {
+router.get("/data/:id?", auth(true), async (req, res) => {
     try {
         const { id } = req.params;
         const data = await User.findAll(!id ? {} : { where: { id } });
@@ -30,7 +31,7 @@ router.post("/", async (req, res) => {
 
         // User Creation and Login
         const newUser = await User.create({ username, password: passHash });
-        login(req.session, newUser.id);
+        login(req.session, newUser);
 
         return res.status(200).send("New user created successfully");
     } catch (err) {
@@ -61,7 +62,7 @@ router.post("/login", async (req, res) => {
         };
 
         // Login
-        login(req.session, loginUser.id);
+        login(req.session, loginUser);
         return res.status(200).send("Successfully logged in");
     } catch (err) {
         console.error(err);
@@ -70,14 +71,14 @@ router.post("/login", async (req, res) => {
 });
 
 // Logout
-router.get("/logout", auth, (req, res) => {
+router.get("/logout", auth(false), (req, res) => {
     logout(req.session);
     return res.status(200).send("Successfully logged out");
 });
 
 // Update User
 // Seperate route eventually to have secure password update
-router.put("/:id", auth, async (req, res) => {
+router.put("/update/:id", auth(false), async (req, res) => {
     try {
         const { id } = req.params;
         const { username } = req.body;
@@ -87,7 +88,7 @@ router.put("/:id", auth, async (req, res) => {
             return res.status(400).send("Missing required field(s).");
         };
         // Users can only update their own question (unless admin user)
-        if (req.user !== id) {
+        if (req.user.id !== id && !req.user.admin_ind) {
             return res.status(401).send("Unauthorized.");
         };
 
@@ -99,8 +100,28 @@ router.put("/:id", auth, async (req, res) => {
     }
 });
 
+router.put("/admin", auth(true), async (req, res) => {
+    try {
+        const { id, secret } = req.body;
+        
+        // Validation
+        if (!id || !secret) {
+            return res.status(400).send("Missing required field(s)");
+        };
+        if (secret !== process.env.ADMIN_SECRET) {
+            return res.status(400).send("Unauthorized");
+        };
+
+        await User.update({ admin_ind: true }, { where: { id } });
+        return res.status(200).send(`User ${id} successfully updated to admin.`);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send("Internal Server Error")
+    }
+});
+
 // Soft Delete
-router.put("/soft/:id", auth, async (req, res) => {
+router.put("/soft/:id", auth(false), async (req, res) => {
     try {
         const { id } = req.params;
         
@@ -109,7 +130,7 @@ router.put("/soft/:id", auth, async (req, res) => {
             return res.status(400).send("Missing required field(s)");
         };
         // Users can only soft delete their own questions (unless admin user)
-        if (req.user !== id) {
+        if (req.user.id !== id && !req.user.admin_ind) {
             return res.status(401).send("Unauthorized");
         };
 
@@ -125,7 +146,7 @@ router.put("/soft/:id", auth, async (req, res) => {
 });
 
 // Hard Delete | Admin Route
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", auth(true), async (req, res) => {
     try {
         const { id } = req.params;
         if (!id) {

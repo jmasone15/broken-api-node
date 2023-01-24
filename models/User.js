@@ -18,6 +18,11 @@ const User = sequelize.define("User", {
         type: DataTypes.STRING,
         allowNull: false
     },
+    admin_ind: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+    },
     active_ind: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

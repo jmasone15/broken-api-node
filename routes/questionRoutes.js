@@ -5,7 +5,7 @@ const { logout, auth } = require("../middleware/auth");
 // All Protected Routes
 
 // Get Question(s) | Admin Route
-router.get("/data/:id?", async (req, res) => {
+router.get("/data/:id?", auth(true), async (req, res) => {
     try {
         const { id } = req.params;
         const data = await Question.findAll(!id ? {} : { where: { id } });
@@ -17,10 +17,10 @@ router.get("/data/:id?", async (req, res) => {
 });
 
 // Get Questions for logged in user
-router.get("/user", auth, async (req, res) => {
+router.get("/user", auth(false), async (req, res) => {
     try {
         // Validation
-        const userData = await User.findOne({ where: { id: req.user } });
+        const userData = await User.findOne({ where: { id: req.user.id } });
         if (!userData) {
             // If somehow a user is logged in that doesn't exist in our db, log them out (super edge case).
             logout(req.session);
@@ -36,7 +36,7 @@ router.get("/user", auth, async (req, res) => {
 });
 
 // Create Question
-router.post("/", auth, async (req, res) => {
+router.post("/", auth(false), async (req, res) => {
     try {
         // Validation
         const { title, body } = req.body;
@@ -44,7 +44,7 @@ router.post("/", auth, async (req, res) => {
             return res.status(400).send("Missing required field(s).");
         };
 
-        const newQuestion = await Question.create({ title, body, user_id: req.user });
+        const newQuestion = await Question.create({ title, body, user_id: req.user.id });
         return res.status(200).json(newQuestion);
     } catch (err) {
         console.error(err)
@@ -53,7 +53,7 @@ router.post("/", auth, async (req, res) => {
 });
 
 // Update Question
-router.put("/:id", auth, async (req, res) => {
+router.put("/:id", auth(false), async (req, res) => {
     try {
         const { id } = req.params;
         const { title, body } = req.body;
@@ -71,7 +71,7 @@ router.put("/:id", auth, async (req, res) => {
         if (!updateQuestion) {
             return res.status(400).send("No Question with that id.");
         };
-        if (updateQuestion.user_id !== req.user) {
+        if (updateQuestion.user_id !== req.user.id && !req.user.admin_ind) {
             return res.status(401).send("Unauthorized")
         };
 
@@ -89,7 +89,7 @@ router.put("/:id", auth, async (req, res) => {
 });
 
 // Soft Delete
-router.put("/soft/:id", auth, async (req, res) => {
+router.put("/soft/:id", auth(false), async (req, res) => {
     try {
         // Validation
         const { id } = req.params;
@@ -102,7 +102,7 @@ router.put("/soft/:id", auth, async (req, res) => {
         if (!updateQuestion) {
             return res.status(400).send("No Question with that id.");
         };
-        if (updateQuestion.user_id !== req.user) {
+        if (updateQuestion.user_id !== req.user.id && !req.user.admin_ind) {
             return res.status(401).send("Unauthorized")
         };
 
@@ -117,7 +117,7 @@ router.put("/soft/:id", auth, async (req, res) => {
 });
 
 // Hard Delete | Admin Route
-router.delete("/:id", auth, async (req, res) => {
+router.delete("/:id", auth(true), async (req, res) => {
     try {
         const { id } = req.params;
         if (!id) {
