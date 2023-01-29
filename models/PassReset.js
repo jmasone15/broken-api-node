@@ -7,10 +7,6 @@ const PassReset = sequelize.define("PassReset", {
         allowNull: false,
         unique: true
     },
-    user_id: {
-        type: DataTypes.UUID,
-        allowNull: false
-    },
     active_ind: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

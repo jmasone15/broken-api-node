@@ -22,6 +22,13 @@ User.hasMany(Answer, {
         allowNull: false
     }
 });
+User.hasOne(PassReset, {
+    foreignKey: {
+        name: "user_id",
+        type: DataTypes.UUID,
+        allowNull: false
+    }
+})
 
 // Question Associations
 Question.belongsTo(User, {
