@@ -4,7 +4,7 @@ const bcrypt = require("bcryptjs");
 const { login, logout, auth } = require("../middleware/auth");
 
 // Get User(s) | Admin Route
-router.get("/data/:id?", async (req, res) => {
+router.get("/data/:id?", auth(true), async (req, res) => {
     try {
         const { id } = req.params;
         const data = await User.findAll(!id ? {} : { where: { id } });
