@@ -5,6 +5,7 @@ const { DataTypes } = require("sequelize");
 const User = require("./User");
 const Question = require("./Question");
 const Answer = require("./Answer");
+const PassReset = require("./PassReset");
 
 // User Associations
 User.hasMany(Question, {
@@ -58,5 +59,6 @@ Answer.belongsTo(User, {
 module.exports = {
     User,
     Question,
-    Answer
+    Answer,
+    PassReset
 };

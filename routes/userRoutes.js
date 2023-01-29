@@ -2,10 +2,9 @@ const router = require("express").Router();
 const { User } = require("../models");
 const bcrypt = require("bcryptjs");
 const { login, logout, auth } = require("../middleware/auth");
-require("dotenv").config();
 
 // Get User(s) | Admin Route
-router.get("/data/:id?", auth(true), async (req, res) => {
+router.get("/data/:id?", async (req, res) => {
     try {
         const { id } = req.params;
         const data = await User.findAll(!id ? {} : { where: { id } });
@@ -77,7 +76,6 @@ router.get("/logout", auth(false), (req, res) => {
 });
 
 // Update User
-// Seperate route eventually to have secure password update
 router.put("/update/:id", auth(false), async (req, res) => {
     try {
         const { id } = req.params;
@@ -103,7 +101,7 @@ router.put("/update/:id", auth(false), async (req, res) => {
 router.put("/admin", auth(true), async (req, res) => {
     try {
         const { id, secret } = req.body;
-        
+
         // Validation
         if (!id || !secret) {
             return res.status(400).send("Missing required field(s)");
@@ -124,7 +122,7 @@ router.put("/admin", auth(true), async (req, res) => {
 router.put("/soft/:id", auth(false), async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         // Validation
         if (!id) {
             return res.status(400).send("Missing required field(s)");
@@ -163,7 +161,7 @@ router.delete("/:id", auth(true), async (req, res) => {
 
 // Testing route, delete later
 router.get("/session", (req, res) => {
-    return res.json(req.session)
+    return res.json(req.session);
 });
 
 module.exports = router;
