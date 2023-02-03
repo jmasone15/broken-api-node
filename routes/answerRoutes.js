@@ -39,7 +39,7 @@ router.get("/question/:id", auth(false), async (req, res) => {
     try {
         // Validation
         const { id } = req.params;
-        if(!id) {
+        if (!id) {
             return res.status(400).send("Missing question_id field.");
         };
         const questionData = await Question.findOne({ where: { id } });
@@ -65,9 +65,9 @@ router.post("/", auth(false), async (req, res) => {
         };
 
         // Cannot create answer for question that doesn't exist
-        const parentQuestion = Question.findOne({ where: { question_id }});
+        const parentQuestion = Question.findOne({ where: { question_id } });
         if (!parentQuestion) {
-          return res.status(400).send("No Question with that id");  
+            return res.status(400).send("No Question with that id");
         };
         // Cannot answer question that user owns
         if (parentQuestion.user_id == req.user.id) {
@@ -93,7 +93,7 @@ router.put("/:id", auth(false), async (req, res) => {
             return res.status(400).send("Missing Required Fields");
         };
 
-        const updateAnswer = Answer.findOne({ where: { id }});
+        const updateAnswer = Answer.findOne({ where: { id } });
         if (!updateAnswer) {
             return res.status(400).send("No Answer with that id.");
         };
@@ -122,7 +122,7 @@ router.put("/soft/:id", auth(false), async (req, res) => {
             return res.status(400).send("Answer Id is a required parameter.");
         };
 
-        const updateAnswer = Answer.findOne({ where: { id }});
+        const updateAnswer = Answer.findOne({ where: { id } });
         if (!updateAnswer) {
             return res.status(400).send("No Answer with that id.");
         };

@@ -159,7 +159,7 @@ router.delete("/:id", auth(true), async (req, res) => {
     }
 });
 
-// Testing route, delete later
+// Testing route.
 router.get("/session", (req, res) => {
     return res.json(req.session);
 });
