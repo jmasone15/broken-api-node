@@ -6,8 +6,10 @@ const { logout, auth } = require("../middleware/auth");
 
 // Get Question(s) | Admin Route
 router.get("/data/:id?", auth(true), async (req, res) => {
+    // The question mark makes the URL parameter optional
     try {
         const { id } = req.params;
+        // Only query by id if one is provided
         const data = await Question.findAll(!id ? {} : { where: { id } });
         return res.status(200).json(data);
     } catch (err) {
@@ -27,7 +29,8 @@ router.get("/user", auth(false), async (req, res) => {
             return res.status(400).send(`User ${req.user} not found.`)
         };
 
-        const userQuestions = await userData.getQuestions();
+        // getQuestions() is an automatically generated sequelize method when you created a model association
+        const userQuestions = await userData.getQuestions({ where: { active_ind: true } });
         return res.status(200).json(userQuestions);
     } catch (err) {
         console.error(err);
@@ -47,8 +50,8 @@ router.post("/", auth(false), async (req, res) => {
         const newQuestion = await Question.create({ title, body, user_id: req.user.id });
         return res.status(200).json(newQuestion);
     } catch (err) {
-        console.error(err)
-        return res.status(500).send("Internal Server Error")
+        console.error(err);
+        return res.status(500).send("Internal Server Error");
     }
 });
 
@@ -67,7 +70,7 @@ router.put("/:id", auth(false), async (req, res) => {
         };
 
         // Cannot update a question that logged in user does not own (unless admin user)
-        const updateQuestion = Question.findOne({ where: { id }});
+        const updateQuestion = await Question.findOne({ where: { id, active_ind: true } });
         if (!updateQuestion) {
             return res.status(400).send("No Question with that id.");
         };
@@ -75,12 +78,14 @@ router.put("/:id", auth(false), async (req, res) => {
             return res.status(401).send("Unauthorized")
         };
 
-        // set method is better in this situation that update method
-        // update method requeries to find the record we are updating, already have the instance from validation with set.
-        await updateQuestion.set({
-            title,
-            body
+        // set/save method is better in this situation that update method
+        // update method requeries to find the record we are updating, already have the instance from validation.
+        updateQuestion.set({
+            title: title || updateQuestion.title,
+            body: body || updateQuestion.body
         });
+        updateQuestion.save();
+
         return res.status(200).send(`Question ${id} updated successfully.`);
     } catch (error) {
         console.error(error);
@@ -98,7 +103,7 @@ router.put("/soft/:id", auth(false), async (req, res) => {
         };
 
         // Cannot delete question that user does not own (unless admin user)
-        const updateQuestion = Question.findOne({ where: { id }});
+        const updateQuestion = await Question.findOne({ where: { id } });
         if (!updateQuestion) {
             return res.status(400).send("No Question with that id.");
         };
@@ -108,7 +113,8 @@ router.put("/soft/:id", auth(false), async (req, res) => {
 
         // same as above, update method not necessary because we already have instance available 
         updateQuestion.active_ind = false;
-        await updateQuestion.save()
+        updateQuestion.save();
+
         return res.status(200).send(`Question ${id} successfully deleted (Soft).`);
     } catch (error) {
         console.error(error);

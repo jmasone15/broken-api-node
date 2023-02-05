@@ -19,6 +19,7 @@ app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    // Saving the session in the database allows for MYSQL to handle and store all session objects
     store: new SequelizeStore({
         db: sequelize
     })
@@ -31,6 +32,8 @@ app.use("/api", routes);
 app.listen(PORT, async () => {
     try {
         await sequelize.authenticate();
+        // force: true will drop all tables an re run the models.
+        // Set to true if model changes were made
         sequelize.sync({ force: false });
         console.log("MySQL Database connected successfully.", `🌎 Server Listening at: http://localhost:${PORT} 🌎`);
     } catch (error) {

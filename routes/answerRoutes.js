@@ -6,13 +6,15 @@ const { auth } = require("../middleware/auth");
 
 // Get Answer(s) | Admin Route
 router.get("/data/:id?", auth(true), async (req, res) => {
+    // The question mark makes the URL parameter optional
     try {
         const { id } = req.params;
+        // Only query by id if one is provided
         const data = await Answer.findAll(!id ? {} : { where: { id } });
         return res.status(200).json(data);
     } catch (err) {
-        console.error(err)
-        return res.status(500).send("Internal Server Error")
+        console.error(err);
+        return res.status(500).send("Internal Server Error");
     }
 });
 
@@ -23,10 +25,10 @@ router.get("/user", auth(false), async (req, res) => {
         if (!userData) {
             // If somehow a user is logged in that doesn't exist in our db, log them out (super edge case).
             logout(req.session);
-            return res.status(400).send(`User ${req.user.id} not found.`)
+            return res.status(400).send(`User ${req.user.id} not found.`);
         };
 
-        const userAnswers = await userData.getAnswers();
+        const userAnswers = await userData.getAnswers({ where: { active_ind: true } });
         return res.status(200).json(userAnswers);
     } catch (err) {
         console.error(err);
@@ -47,7 +49,7 @@ router.get("/question/:id", auth(false), async (req, res) => {
             return res.status(400).send(`Question ${id} not found.`)
         };
 
-        const questionAnswers = await questionData.getAnswers();
+        const questionAnswers = await questionData.getAnswers({ where: { active_ind: true } });
         return res.status(200).json(questionAnswers);
     } catch (err) {
         console.error(err);
@@ -65,7 +67,7 @@ router.post("/", auth(false), async (req, res) => {
         };
 
         // Cannot create answer for question that doesn't exist
-        const parentQuestion = Question.findOne({ where: { question_id } });
+        const parentQuestion = Question.findOne({ where: { id: question_id } });
         if (!parentQuestion) {
             return res.status(400).send("No Question with that id");
         };
@@ -93,7 +95,7 @@ router.put("/:id", auth(false), async (req, res) => {
             return res.status(400).send("Missing Required Fields");
         };
 
-        const updateAnswer = Answer.findOne({ where: { id } });
+        const updateAnswer = await Answer.findOne({ where: { id } });
         if (!updateAnswer) {
             return res.status(400).send("No Answer with that id.");
         };
@@ -104,7 +106,7 @@ router.put("/:id", auth(false), async (req, res) => {
         };
 
         updateAnswer.response = response;
-        await updateAnswer.save();
+        updateAnswer.save();
 
         return res.status(200).send(`Response ${id} updated successfully.`);
     } catch (error) {
@@ -122,7 +124,7 @@ router.put("/soft/:id", auth(false), async (req, res) => {
             return res.status(400).send("Answer Id is a required parameter.");
         };
 
-        const updateAnswer = Answer.findOne({ where: { id } });
+        const updateAnswer = await Answer.findOne({ where: { id } });
         if (!updateAnswer) {
             return res.status(400).send("No Answer with that id.");
         };

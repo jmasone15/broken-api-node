@@ -5,13 +5,15 @@ const { login, logout, auth } = require("../middleware/auth");
 
 // Get User(s) | Admin Route
 router.get("/data/:id?", auth(true), async (req, res) => {
+    // The question mark makes the URL parameter optional
     try {
         const { id } = req.params;
+        // Only query by id if one is provided
         const data = await User.findAll(!id ? {} : { where: { id } });
         return res.status(200).json(data);
     } catch (err) {
-        console.error(err)
-        return res.status(500).send("Internal Server Error")
+        console.error(err);
+        return res.status(500).send("Internal Server Error");
     }
 });
 
@@ -22,7 +24,11 @@ router.post("/", async (req, res) => {
         const { username, password } = req.body;
         if (!username || !password) {
             return res.status(400).send("Username and password are required fields.");
-        };
+        }
+        const existingUser = await User.findOne({ where: { username } });
+        if (existingUser) {
+            return res.status(400).send("Username already in use.");
+        }
 
         // Password Hashing
         const passSalt = await bcrypt.genSalt();
@@ -47,14 +53,10 @@ router.post("/login", async (req, res) => {
         if (!username || !password) {
             return res.status(400).send("Username and password are required fields.");
         };
-
-        // Find User and check if exists
         const loginUser = await User.findOne({ where: { username } });
         if (!loginUser) {
             return res.status(401).send("Incorrect credentials, please try again.");
         };
-
-        // Validate password hash
         const passCorrect = await bcrypt.compare(password, loginUser.password);
         if (!passCorrect) {
             return res.status(401).send("Incorrect credentials, please try again.");
@@ -90,7 +92,7 @@ router.put("/update/:id", auth(false), async (req, res) => {
             return res.status(401).send("Unauthorized.");
         };
 
-        await User.update({ username }, { where: { id } });
+        await User.update({ username }, { where: { id, active_ind: true } });
         return res.status(200).send(`User ${id} updated successfully.`);
     } catch (error) {
         console.error(error);
@@ -126,16 +128,19 @@ router.put("/soft/:id", auth(false), async (req, res) => {
         // Validation
         if (!id) {
             return res.status(400).send("Missing required field(s)");
-        };
-        // Users can only soft delete their own questions (unless admin user)
+        }
+        // Users can only soft delete their own account (unless admin user)
         if (req.user.id !== id && !req.user.admin_ind) {
             return res.status(401).send("Unauthorized");
-        };
+        }
 
         await User.update({ active_ind: false }, { where: { id } });
 
-        // If the user deletes their profile, automatically log the out.
-        logout(req.session);
+        // If the user deletes their profile, automatically log them out.
+        if(!req.user.admin_ind) {
+            logout(req.session);
+        }
+
         return res.status(200).send(`User ${id} successfully deleted (Soft).`);
     } catch (error) {
         console.error(error);
@@ -159,7 +164,7 @@ router.delete("/:id", auth(true), async (req, res) => {
     }
 });
 
-// Testing route.
+// Testing route | Allows you to view the session in the database
 router.get("/session", (req, res) => {
     return res.json(req.session);
 });
