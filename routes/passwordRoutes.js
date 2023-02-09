@@ -6,7 +6,7 @@ const { auth } = require("../middleware/auth");
 require("dotenv").config();
 
 // Password Reset Request
-router.get("/:id", async (req, res) => {
+router.get("/request/:id", async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -21,7 +21,7 @@ router.get("/:id", async (req, res) => {
         // User Validation
         const updateUser = await User.findOne({ where: { id: id, active_ind: true } });
         if (!updateUser) {
-            return res.status(400).send("Unknown user.")
+            return res.status(404).send("Unknown user.")
         }
 
         // Password Validation

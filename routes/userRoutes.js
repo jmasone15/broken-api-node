@@ -10,6 +10,11 @@ router.get("/data/:id?", auth(true), async (req, res) => {
         const { id } = req.params;
         // Only query by id if one is provided
         const data = await User.findAll(!id ? {} : { where: { id } });
+
+        if (!data) {
+            return res.status(404).send("No user(s) found.");
+        }
+
         return res.status(200).json(data);
     } catch (err) {
         console.error(err);
@@ -18,7 +23,7 @@ router.get("/data/:id?", auth(true), async (req, res) => {
 });
 
 // Sign Up New User
-router.post("/", async (req, res) => {
+router.post("/signup", async (req, res) => {
     try {
         // Validation
         const { username, password } = req.body;
@@ -142,22 +147,6 @@ router.put("/soft/:id", auth(false), async (req, res) => {
         }
 
         return res.status(200).send(`User ${id} successfully deleted (Soft).`);
-    } catch (error) {
-        console.error(error);
-        return res.status(500).send("Internal Server Error");
-    }
-});
-
-// Hard Delete | Admin Route
-router.delete("/:id", auth(true), async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!id) {
-            return res.status(400).send("User Id is a required parameter.");
-        };
-
-        await User.destroy({ where: { id } });
-        return res.status(200).send(`User ${id} successfully deleted (Hard).`);
     } catch (error) {
         console.error(error);
         return res.status(500).send("Internal Server Error");

@@ -11,6 +11,11 @@ router.get("/data/:id?", auth(true), async (req, res) => {
         const { id } = req.params;
         // Only query by id if one is provided
         const data = await Question.findAll(!id ? {} : { where: { id } });
+
+        if (!data) {
+            return res.status(404).send("No question(s) found.");
+        }
+
         return res.status(200).json(data);
     } catch (err) {
         console.error(err);
@@ -26,7 +31,7 @@ router.get("/user", auth(false), async (req, res) => {
         if (!userData) {
             // If somehow a user is logged in that doesn't exist in our db, log them out (super edge case).
             logout(req.session);
-            return res.status(400).send(`User ${req.user} not found.`)
+            return res.status(404).send(`User ${req.user} not found.`)
         };
 
         // getQuestions() is an automatically generated sequelize method when you created a model association
@@ -39,7 +44,7 @@ router.get("/user", auth(false), async (req, res) => {
 });
 
 // Create Question
-router.post("/", auth(false), async (req, res) => {
+router.post("/create", auth(false), async (req, res) => {
     try {
         // Validation
         const { title, body } = req.body;
@@ -56,7 +61,7 @@ router.post("/", auth(false), async (req, res) => {
 });
 
 // Update Question
-router.put("/:id", auth(false), async (req, res) => {
+router.put("/update/:id", auth(false), async (req, res) => {
     try {
         const { id } = req.params;
         const { title, body } = req.body;
@@ -72,7 +77,7 @@ router.put("/:id", auth(false), async (req, res) => {
         // Cannot update a question that logged in user does not own (unless admin user)
         const updateQuestion = await Question.findOne({ where: { id, active_ind: true } });
         if (!updateQuestion) {
-            return res.status(400).send("No Question with that id.");
+            return res.status(404).send("No Question with that id.");
         };
         if (updateQuestion.user_id !== req.user.id && !req.user.admin_ind) {
             return res.status(401).send("Unauthorized")
@@ -105,7 +110,7 @@ router.put("/soft/:id", auth(false), async (req, res) => {
         // Cannot delete question that user does not own (unless admin user)
         const updateQuestion = await Question.findOne({ where: { id } });
         if (!updateQuestion) {
-            return res.status(400).send("No Question with that id.");
+            return res.status(404).send("No Question with that id.");
         };
         if (updateQuestion.user_id !== req.user.id && !req.user.admin_ind) {
             return res.status(401).send("Unauthorized")
@@ -116,22 +121,6 @@ router.put("/soft/:id", auth(false), async (req, res) => {
         updateQuestion.save();
 
         return res.status(200).send(`Question ${id} successfully deleted (Soft).`);
-    } catch (error) {
-        console.error(error);
-        return res.status(500).send("Internal Server Error");
-    }
-});
-
-// Hard Delete | Admin Route
-router.delete("/:id", auth(true), async (req, res) => {
-    try {
-        const { id } = req.params;
-        if (!id) {
-            return res.status(400).send("Question Id is a required parameter.");
-        };
-
-        await Question.destroy({ where: { id } });
-        return res.status(200).send(`Question ${id} successfully deleted (Hard).`);
     } catch (error) {
         console.error(error);
         return res.status(500).send("Internal Server Error");
